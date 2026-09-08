@@ -1,0 +1,43 @@
+# .NET build and publish outputs
+[Bb]in/
+[Oo]bj/
+[Aa]rtifacts/
+[Pp]ublish/
+[Tt]est[Rr]esults/
+*.binlog
+*.trx
+*.coverage
+*.coveragexml
+
+# Local IDE and assistant state
+.vs/
+.vscode/
+.idea/
+.workbuddy/
+.codex/
+.agents/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Local logs, temporary files, and OS metadata
+*.log
+*.tmp
+*.bak
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Local credentials, signing keys, and publishing profiles
+.env
+.env.*
+!.env.example
+*.pfx
+*.p12
+*.snk
+*.pubxml
+
+# Optional third-party tools are installed separately
+platform-tools/
+scrcpy/

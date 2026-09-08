@@ -1,0 +1,419 @@
+﻿<Window x:Class="AndroidDevLink.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:AndroidDevLink"
+        xmlns:views="clr-namespace:AndroidDevLink.Views"
+        mc:Ignorable="d"
+        Title="Android Dev Link"
+        Icon="pack://application:,,,/Assets/ADL.ico"
+        Height="760"
+        Width="1360"
+        MinHeight="600"
+        MinWidth="800"
+        Loaded="Window_Loaded"
+        AllowDrop="True"
+        PreviewDragEnter="Window_PreviewDragOver"
+        PreviewDragOver="Window_PreviewDragOver"
+        PreviewDragLeave="Window_PreviewDragLeave"
+        PreviewDrop="Window_PreviewDrop">
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+        <Style TargetType="Button">
+            <Setter Property="Margin"
+                    Value="0,0,8,0"/>
+            <Setter Property="Padding"
+                    Value="12,6"/>
+            <Setter Property="MinHeight"
+                    Value="32"/>
+        </Style>
+        <Style TargetType="ListBox">
+            <Setter Property="BorderBrush"
+                    Value="#D0D7DE"/>
+            <Setter Property="BorderThickness"
+                    Value="1"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Background="#F6F8FA">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0"
+                Background="White"
+                BorderBrush="#D0D7DE"
+                BorderThickness="0,0,0,1"
+                Padding="16,12">
+            <DockPanel LastChildFill="False">
+                <TextBlock DockPanel.Dock="Left"
+                           Text="Android Dev Link"
+                           FontSize="20"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center"
+                           Margin="0,0,24,0"/>
+                <Button DockPanel.Dock="Left"
+                        Content="刷新设备"
+                        Command="{Binding RefreshDevicesCommand}"/>
+                <Button DockPanel.Dock="Left"
+                        Content="刷新包列表"
+                        Command="{Binding RefreshPackagesCommand}"/>
+                <Button DockPanel.Dock="Left"
+                        Content="!Cozyla!"
+                        Command="{Binding CheckCozylaPackge}"/>
+            </DockPanel>
+        </Border>
+
+        <Grid Grid.Row="1"
+              Margin="16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="300"
+                                  MinWidth="220"/>
+                <ColumnDefinition Width="8"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <Grid Grid.Column="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <TextBlock Text="已连接设备"
+                           FontSize="15"
+                           FontWeight="SemiBold"
+                           Margin="0,0,0,8"/>
+                <ListBox x:Name="DeviceListBox"
+                         Grid.Row="1"
+                         ItemsSource="{Binding Devices}"
+                         SelectedItem="{Binding SelectedDevice, Mode=TwoWay}"
+                         PreviewMouseRightButtonDown="ListBox_PreviewMouseRightButtonDown"
+                         ContextMenuOpening="ListBox_ContextMenuOpening"
+                         DisplayMemberPath="DisplayName"
+                         Background="White"
+                         Padding="4">
+                    <ListBox.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Header="复制 SN"
+                                      Click="CopySelectedSerial_Click"/>
+                            <MenuItem Header="复制 Model 名"
+                                      Click="CopySelectedModelName_Click"/>
+                        </ContextMenu>
+                    </ListBox.ContextMenu>
+                </ListBox>
+                <StackPanel Grid.Row="2"
+                            Orientation="Horizontal"
+                            Margin="0,10,0,0">
+                    <Button Content="复制所选 SN"
+                            Click="CopySelectedSerial_Click"/>
+                    <Button Content="复制全部 SN"
+                            Margin="0"
+                            Click="CopyAllSerials_Click"/>
+                </StackPanel>
+            </Grid>
+
+            <GridSplitter Grid.Column="1"
+                          Width="8"
+                          HorizontalAlignment="Stretch"
+                          Background="Transparent"/>
+
+            <Grid Grid.Column="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <TextBlock Text="{Binding SelectedDeviceTitle}"
+                           FontSize="15"
+                           FontWeight="SemiBold"
+                           Margin="0,0,0,8"/>
+                <Border Grid.Row="1"
+                        Background="White"
+                        BorderBrush="#D0D7DE"
+                        BorderThickness="1"
+                        Padding="12"
+                        Margin="0,0,0,12">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="100"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Row="0"
+                                   Grid.Column="0"
+                                   Text="Windows 路径"
+                                   VerticalAlignment="Center"
+                                   Margin="0,0,12,8"/>
+                        <TextBox x:Name="WindowsPathTextBox"
+                                 Grid.Row="0"
+                                 Grid.Column="1"
+                                 Text="{Binding WindowsPath, UpdateSourceTrigger=PropertyChanged}"
+                                 MinHeight="32"
+                                 VerticalContentAlignment="Center"
+                                 Margin="0,0,0,8"
+                                 ToolTip="可将任意文件拖到窗口任意位置"/>
+                        <Button Grid.Row="0"
+                                Grid.Column="2"
+                                Content="选择文件"
+                                Margin="8,0,0,8"
+                                Click="SelectWindowsPath_Click"/>
+
+                        <TextBlock Grid.Row="1"
+                                   Grid.Column="0"
+                                   Text="设备路径"
+                                   VerticalAlignment="Center"
+                                   Margin="0,0,12,8"/>
+                        <TextBox Grid.Row="1"
+                                 Grid.Column="1"
+                                 Text="{Binding AndroidPath, UpdateSourceTrigger=PropertyChanged}"
+                                 MinHeight="32"
+                                 VerticalContentAlignment="Center"
+                                 Margin="0,0,0,8"
+                                 ToolTip="例如 /sdcard/Download/app.apk"/>
+
+                        <StackPanel Grid.Row="2"
+                                    Grid.Column="1"
+                                    Grid.ColumnSpan="2"
+                                    Orientation="Horizontal">
+                            <Button Content="安装 APK"
+                                    Command="{Binding InstallApkCommand}"/>
+                            <Button Content="推送到 Android"
+                                    Command="{Binding PushFileCommand}"/>
+                            <Button Content="从 Android 拉取"
+                                    Margin="0"
+                                    Command="{Binding PullFileCommand}"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+                <TabControl Grid.Row="2"
+                            Background="White">
+                    <TabItem Header="系统包">
+                        <Grid Margin="8">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <Grid Grid.Row="0"
+                                  Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="包名过滤"
+                                           VerticalAlignment="Center"
+                                           Margin="0,0,12,0"/>
+                                <TextBox Grid.Column="1"
+                                         MinHeight="32"
+                                         VerticalContentAlignment="Center"
+                                         Text="{Binding SystemPackageFilter, UpdateSourceTrigger=PropertyChanged}"/>
+                            </Grid>
+                            <ListBox x:Name="SystemPackageListBox"
+                                     Grid.Row="1"
+                                     ItemsSource="{Binding FilteredSystemPackages}"
+                                     SelectedItem="{Binding SelectedSystemPackage, Mode=TwoWay}"
+                                     PreviewMouseRightButtonDown="ListBox_PreviewMouseRightButtonDown"
+                                     ContextMenuOpening="ListBox_ContextMenuOpening"
+                                     FontFamily="Cascadia Mono, Consolas">
+                                <ListBox.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="复制包名"
+                                                  Tag="System"
+                                                  Click="CopyPackageName_Click"/>
+                                        <MenuItem Header="复制 APK 路径"
+                                                  Tag="System"
+                                                  Click="CopyApkPath_Click"/>
+                                        <MenuItem Header="提取 APK 到桌面"
+                                                  Tag="System"
+                                                  Click="ExtractApkToDesktop_Click"/>
+                                    </ContextMenu>
+                                </ListBox.ContextMenu>
+                            </ListBox>
+                            <TextBlock Grid.Row="1"
+                                       Text="{Binding SystemPackagesEmptyMessage}"
+                                       Visibility="{Binding IsSystemPackagesEmptyMessageVisible, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                       Foreground="#6E7781"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       IsHitTestVisible="False"/>
+                            <StackPanel Grid.Row="2"
+                                        Orientation="Horizontal"
+                                        Margin="0,8,0,0">
+                                <Button Content="复制包名"
+                                        Tag="System"
+                                        Click="CopyPackageName_Click"/>
+                                <Button Content="卸载所选包"
+                                        Command="{Binding UninstallSystemPackageCommand}"/>
+                                <Button Content="启动 LAUNCHER"
+                                        Margin="0"
+                                        Command="{Binding LaunchSystemPackageCommand}"/>
+                            </StackPanel>
+                        </Grid>
+                    </TabItem>
+                    <TabItem Header="第三方包">
+                        <Grid Margin="8">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <Grid Grid.Row="0"
+                                      Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="包名过滤"
+                                               VerticalAlignment="Center"
+                                               Margin="0,0,12,0"/>
+                                    <TextBox Grid.Column="1"
+                                             MinHeight="32"
+                                             VerticalContentAlignment="Center"
+                                             Text="{Binding ThirdPartyPackageFilter, UpdateSourceTrigger=PropertyChanged}"/>
+                                </Grid>
+                                <ListBox x:Name="ThirdPartyPackageListBox"
+                                         Grid.Row="1"
+                                         ItemsSource="{Binding FilteredThirdPartyPackages}"
+                                         SelectedItem="{Binding SelectedThirdPartyPackage, Mode=TwoWay}"
+                                         PreviewMouseRightButtonDown="ListBox_PreviewMouseRightButtonDown"
+                                         ContextMenuOpening="ListBox_ContextMenuOpening"
+                                         FontFamily="Cascadia Mono, Consolas">
+                                    <ListBox.ContextMenu>
+                                        <ContextMenu>
+                                            <MenuItem Header="复制包名"
+                                                      Tag="ThirdParty"
+                                                      Click="CopyPackageName_Click"/>
+                                            <MenuItem Header="复制 APK 路径"
+                                                      Tag="ThirdParty"
+                                                      Click="CopyApkPath_Click"/>
+                                            <MenuItem Header="提取 APK 到桌面"
+                                                      Tag="ThirdParty"
+                                                      Click="ExtractApkToDesktop_Click"/>
+                                        </ContextMenu>
+                                    </ListBox.ContextMenu>
+                                </ListBox>
+                                <TextBlock Grid.Row="1"
+                                           Text="{Binding ThirdPartyPackagesEmptyMessage}"
+                                           Visibility="{Binding IsThirdPartyPackagesEmptyMessageVisible, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                           Foreground="#6E7781"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"
+                                           IsHitTestVisible="False"/>
+                                <StackPanel Grid.Row="2"
+                                            Orientation="Horizontal"
+                                            Margin="0,8,0,0">
+                                    <Button Content="复制包名"
+                                            Tag="ThirdParty"
+                                            Click="CopyPackageName_Click"/>
+                                    <Button Content="卸载所选包"
+                                            Command="{Binding UninstallThirdPartyPackageCommand}"/>
+                                    <Button Content="启动 LAUNCHER"
+                                            Margin="0"
+                                            Command="{Binding LaunchThirdPartyPackageCommand}"/>
+                                </StackPanel>
+                            </Grid>
+                        </Grid>
+                    </TabItem>
+                    <TabItem Header="设备控制">
+                        <Grid Margin="16">
+                            <StackPanel Width="180"
+                                        HorizontalAlignment="Left"
+                                        VerticalAlignment="Top">
+                                <Button Content="设备息屏"
+                                        Margin="1,5,1,1"
+                                        Command="{Binding ScreenOffCommand}"/>
+                                <Button Content="设备亮屏"
+                                        Margin="1,5,1,1"
+                                        Command="{Binding ScreenOnCommand}"/>
+                                <Button Content="启动镜像控制"
+                                        Margin="1,5,1,1"
+                                        Command="{Binding StartScrcpyCommand}"
+                                        ToolTip="仅启动 scrcpy 镜像窗口，不显示命令窗口"/>
+                                <TextBlock Text="{Binding AutoRotateStatusText}"
+                                           Margin="1,16,1,4"
+                                           FontWeight="SemiBold"/>
+                                <Button Content="{Binding ToggleAutoRotateButtonText}"
+                                        Margin="1,5,1,1"
+                                        Command="{Binding ToggleAutoRotateCommand}"/>
+                                <Button Content="旋转 90°"
+                                        Margin="1,5,1,1"
+                                        Command="{Binding RotateScreen90Command}"
+                                        ToolTip="若自动旋转已开启，会先自动关闭再旋转"/>
+                            </StackPanel>
+                        </Grid>
+                    </TabItem>
+                    <TabItem Header="文件浏览">
+                        <views:DeviceFileBrowserView DataContext="{Binding FileBrowser}"/>
+                    </TabItem>
+                    <TabItem Header="上传队列">
+                        <Grid Margin="8" DataContext="{Binding UploadQueue}">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <WrapPanel Margin="0,0,0,8">
+                                <Button Content="清空等待项" Command="{Binding ClearWaitingCommand}"/>
+                                <Button Content="清理已结束记录" Command="{Binding ClearFinishedCommand}"/>
+                                <TextBlock Text="{Binding Summary}" VerticalAlignment="Center"/>
+                            </WrapPanel>
+                            <TextBlock Grid.Row="1" Margin="0,0,0,8" TextWrapping="Wrap" Foreground="#57606A"
+                                       Text="按加入顺序上传；上传期间可继续添加文件。关闭程序会取消当前任务和等待项。"/>
+                            <DataGrid Grid.Row="2" ItemsSource="{Binding Items}" AutoGenerateColumns="False"
+                                      IsReadOnly="True" CanUserAddRows="False" CanUserDeleteRows="False"
+                                      CanUserSortColumns="False" HeadersVisibility="Column" RowHeaderWidth="0">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="文件" Binding="{Binding FileName}" Width="160"/>
+                                    <DataGridTextColumn Header="设备" Binding="{Binding Serial}" Width="140"/>
+                                    <DataGridTextColumn Header="目标路径" Binding="{Binding TargetPath}" Width="180"/>
+                                    <DataGridTemplateColumn Header="状态" Width="*" MinWidth="160">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <StackPanel Margin="4">
+                                                    <TextBlock Text="{Binding Status}" ToolTip="{Binding Status}" TextTrimming="CharacterEllipsis"/>
+                                                    <ProgressBar Height="3" Margin="0,4,0,0" IsIndeterminate="True"
+                                                                 Visibility="{Binding IsActive, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                    <DataGridTemplateColumn Header="操作" Width="80">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <Button Content="取消" Margin="2"
+                                                        Command="{Binding DataContext.CancelCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                        CommandParameter="{Binding}"/>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </Grid>
+                    </TabItem>
+                </TabControl>
+            </Grid>
+        </Grid>
+
+        <Border Grid.Row="2"
+                Background="White"
+                BorderBrush="#D0D7DE"
+                BorderThickness="0,1,0,0"
+                Padding="16,8">
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Right" Margin="12,0,0,0" Foreground="#57606A"
+                           Text="{Binding UploadQueue.Summary}" ToolTip="可在“上传队列”页查看任务"/>
+                <TextBlock Foreground="#57606A" Text="{Binding StatusMessage}" TextTrimming="CharacterEllipsis"/>
+            </DockPanel>
+        </Border>
+    </Grid>
+</Window>

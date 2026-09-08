@@ -1,0 +1,177 @@
+<UserControl x:Class="AndroidDevLink.Views.DeviceFileBrowserView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignHeight="520"
+             d:DesignWidth="760">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+        <Style x:Key="ToolbarButtonStyle" TargetType="Button">
+            <Setter Property="MinWidth" Value="34"/>
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="Margin" Value="0,0,6,0"/>
+            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="#D0D7DE"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+        <Style TargetType="DataGridColumnHeader">
+            <Setter Property="Background" Value="#F6F8FA"/>
+            <Setter Property="BorderBrush" Value="#D0D7DE"/>
+            <Setter Property="BorderThickness" Value="0,0,1,1"/>
+            <Setter Property="Padding" Value="10,7"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+        <Style TargetType="DataGridCell">
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="BorderThickness" Value="0"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Background="#F6F8FA">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Background="White" BorderBrush="#D0D7DE" BorderThickness="0,0,0,1" Padding="10">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <DockPanel LastChildFill="False">
+                    <TextBlock DockPanel.Dock="Left" Text="Android 文件浏览器" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,16,0"/>
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                        <Button Content="刷新" Style="{StaticResource ToolbarButtonStyle}" Command="{Binding RefreshCommand}"/>
+                        <Button Content="扫描当前目录媒体" Style="{StaticResource ToolbarButtonStyle}" Command="{Binding ScanMediaDirectoryCommand}" ToolTip="扫描当前目录中的媒体文件"/>
+                        <Button Content="上传文件" Style="{StaticResource ToolbarButtonStyle}" Click="UploadFile_Click" ToolTip="上传本地文件到当前目录"/>
+                        <Button Content="新建文件夹" Style="{StaticResource ToolbarButtonStyle}" Margin="0" Click="CreateDirectory_Click" ToolTip="在当前目录中新建文件夹"/>
+                    </StackPanel>
+                </DockPanel>
+
+                <Grid Grid.Row="1" Margin="0,10,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="180"/>
+                    </Grid.ColumnDefinitions>
+                    <Button Grid.Column="0" Content="←" Style="{StaticResource ToolbarButtonStyle}" Command="{Binding GoBackCommand}" ToolTip="后退"/>
+                    <Button Grid.Column="1" Content="→" Style="{StaticResource ToolbarButtonStyle}" Command="{Binding GoForwardCommand}" ToolTip="前进"/>
+                    <Button Grid.Column="2" Content="↑" Style="{StaticResource ToolbarButtonStyle}" Command="{Binding GoUpCommand}" ToolTip="上一级"/>
+                    <Border Grid.Column="3" Height="32" Background="#F6F8FA" BorderBrush="#D0D7DE" BorderThickness="1" CornerRadius="4" Margin="0,0,8,0" Padding="10,0">
+                        <TextBlock Text="{Binding BreadcrumbText}" Foreground="#24292F" FontFamily="Cascadia Mono, Consolas" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                    </Border>
+                    <TextBox Grid.Column="4"
+                             Height="32"
+                             Padding="9,0"
+                             VerticalContentAlignment="Center"
+                             ToolTip="按名称筛选当前目录"
+                             Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"/>
+                </Grid>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="1" Margin="10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="195" MinWidth="160"/>
+                <ColumnDefinition Width="8"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0" Background="White" BorderBrush="#D0D7DE" BorderThickness="1" CornerRadius="5">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Text="常用位置" FontWeight="SemiBold" Margin="12,11,12,7"/>
+                    <StackPanel Grid.Row="1" Margin="6,0,6,8">
+                        <Button Content="内部存储  /sdcard" HorizontalContentAlignment="Left" Margin="0,2" Padding="8,6" Click="QuickPath_Click" Tag="/sdcard"/>
+                        <Button Content="下载  /sdcard/Download" HorizontalContentAlignment="Left" Margin="0,2" Padding="8,6" Click="QuickPath_Click" Tag="/sdcard/Download"/>
+                        <Button Content="相机  /sdcard/DCIM" HorizontalContentAlignment="Left" Margin="0,2" Padding="8,6" Click="QuickPath_Click" Tag="/sdcard/DCIM"/>
+                        <Button Content="临时目录  /data/local/tmp" HorizontalContentAlignment="Left" Margin="0,2" Padding="8,6" Click="QuickPath_Click" Tag="/data/local/tmp"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <GridSplitter Grid.Column="1" Width="8" HorizontalAlignment="Stretch" Background="Transparent"/>
+
+            <Border Grid.Column="2" Background="White" BorderBrush="#D0D7DE" BorderThickness="1" CornerRadius="5">
+                <Grid>
+                    <DataGrid x:Name="FileDataGrid"
+                              ItemsSource="{Binding VisibleEntries}"
+                              SelectedItem="{Binding SelectedEntry, Mode=TwoWay}"
+                              MouseDoubleClick="FileDataGrid_MouseDoubleClick"
+                              AutoGenerateColumns="False"
+                              HeadersVisibility="Column"
+                              GridLinesVisibility="Horizontal"
+                              HorizontalGridLinesBrush="#EAEEF2"
+                              VerticalGridLinesBrush="Transparent"
+                              RowHeaderWidth="0"
+                              CanUserAddRows="False"
+                              CanUserDeleteRows="False"
+                              CanUserResizeRows="False"
+                              IsReadOnly="True"
+                              SelectionMode="Single"
+                              PreviewMouseRightButtonDown="FileDataGrid_PreviewMouseRightButtonDown"
+                              ContextMenuOpening="FileDataGrid_ContextMenuOpening"
+                              BorderThickness="0">
+                        <DataGrid.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="进入目录"
+                                          Click="OpenDirectory_Click"/>
+                                <MenuItem Header="下载到电脑"
+                                          Click="DownloadEntry_Click"/>
+                                <MenuItem Header="扫描到媒体库"
+                                          Click="ScanMediaFile_Click"/>
+                                <Separator/>
+                                <MenuItem Header="重命名"
+                                          Click="RenameEntry_Click"/>
+                                <MenuItem Header="删除"
+                                          Foreground="#CF222E"
+                                          Click="DeleteEntry_Click"/>
+                                <Separator/>
+                                <MenuItem Header="复制完整路径"
+                                          Click="CopyFullPath_Click"/>
+                                <MenuItem Header="刷新"
+                                          Click="Refresh_Click"/>
+                            </ContextMenu>
+                        </DataGrid.ContextMenu>
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="名称" Binding="{Binding Name}" Width="2*"/>
+                            <DataGridTextColumn Header="类型" Binding="{Binding TypeDisplay}" Width="110"/>
+                            <DataGridTextColumn Header="大小" Binding="{Binding SizeDisplay}" Width="100"/>
+                            <DataGridTextColumn Header="修改时间" Binding="{Binding ModifiedTimeDisplay}" Width="150"/>
+                            <DataGridTextColumn Header="权限" Binding="{Binding Permissions}" Width="110"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False"
+                                Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <ProgressBar Width="180" Height="4" IsIndeterminate="True"/>
+                        <TextBlock Text="正在读取设备目录..." Foreground="#6E7781" HorizontalAlignment="Center" Margin="0,10,0,0"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <Border Grid.Row="2" Background="White" BorderBrush="#D0D7DE" BorderThickness="0,1,0,0" Padding="12,7">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="{Binding ItemCountText}" Foreground="#57606A"/>
+                <TextBlock Grid.Column="1" Text=" | " Foreground="#8C959F"/>
+                <TextBlock Grid.Column="2" Text="{Binding StatusMessage}" Foreground="#57606A" TextTrimming="CharacterEllipsis"/>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>
