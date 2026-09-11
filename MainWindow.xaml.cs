@@ -71,13 +71,10 @@ public partial class MainWindow : Window
             return;
         }
 
-        Microsoft.Win32.SaveFileDialog dialog = new()
+        Microsoft.Win32.OpenFolderDialog dialog = new()
         {
-            Title = "提取 APK 到桌面",
-            FileName = packageName,
-            DefaultExt = ".apk",
-            Filter = "APK 文件 (*.apk)|*.apk|所有文件 (*.*)|*.*",
-            AddExtension = true,
+            Title = $"选择保存 {packageName} APK 的父目录",
+            Multiselect = false,
             InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory)
         };
 
@@ -86,7 +83,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        await ViewModel.ExtractApkToFileAsync(packageName, dialog.FileName);
+        await ViewModel.ExtractApkToFileAsync(packageName, dialog.FolderName);
     }
 
     private void SelectWindowsPath_Click(object sender, RoutedEventArgs e)

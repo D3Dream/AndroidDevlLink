@@ -68,6 +68,9 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private bool? isAutoRotateEnabled;
 
+    [ObservableProperty]
+    private bool scrcpyNoAudio;
+
     public MainWindowViewModel(IAdbService adbService)
         : this(adbService, new ScrcpyService(), new AndroidFileService())
     {
@@ -298,7 +301,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
         }
     }
 
-    public async Task<bool> ExtractApkToFileAsync(string packageName, string destinationPath)
+    public async Task<bool> ExtractApkToFileAsync(string packageName, string destinationDirectory)
     {
         AndroidDevice? device = GetSelectedOnlineDevice();
         if (device is null)
@@ -320,15 +323,26 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
                 return false;
             }
 
-            string sourcePath = paths.FirstOrDefault(path =>
-                path.EndsWith("/base.apk", StringComparison.OrdinalIgnoreCase)) ?? paths[0];
+            string packageDirectory = Path.Combine(destinationDirectory, packageName);
+            Directory.CreateDirectory(packageDirectory);
 
-            SetStatus($"正在提取 {packageName} 的 APK...");
-            await _adbService.PullAsync(device.Serial, sourcePath, destinationPath, CancellationToken.None);
+            SetStatus($"正在提取 {packageName} 的 {paths.Count} 个 APK...");
+            foreach (string sourcePath in paths)
+            {
+                string fileName = Path.GetFileName(sourcePath.Replace('/', Path.DirectorySeparatorChar));
+                if (string.IsNullOrWhiteSpace(fileName))
+                {
+                    continue;
+                }
 
-            SetStatus(paths.Count > 1
-                ? $"已提取 {packageName} 的主 APK 到 {destinationPath}（该应用为分体安装包，仅提取了 base.apk）。"
-                : $"已提取 {packageName} 的 APK 到 {destinationPath}。");
+                await _adbService.PullAsync(
+                    device.Serial,
+                    sourcePath,
+                    Path.Combine(packageDirectory, fileName),
+                    CancellationToken.None);
+            }
+
+            SetStatus($"已提取 {packageName} 的 {paths.Count} 个 APK 到 {packageDirectory}。");
             return true;
         }
         catch (Exception exception)
@@ -514,7 +528,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
         await RunDeviceControlAsync(
             $"正在启动设备 {device.Serial} 的 scrcpy...",
             $"已启动设备 {device.Serial} 的镜像控制。",
-            cancellationToken => _scrcpyService.StartAsync(device.Serial, cancellationToken));
+            cancellationToken => _scrcpyService.StartAsync(device.Serial, ScrcpyNoAudio, cancellationToken));
     }
 
     private async Task ToggleAutoRotateAsync()

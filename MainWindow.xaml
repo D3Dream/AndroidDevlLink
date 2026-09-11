@@ -339,6 +339,10 @@
                                         Margin="1,5,1,1"
                                         Command="{Binding StartScrcpyCommand}"
                                         ToolTip="仅启动 scrcpy 镜像窗口，不显示命令窗口"/>
+                                <CheckBox Content="禁用镜像音频（--no-audio）"
+                                          IsChecked="{Binding ScrcpyNoAudio}"
+                                          Margin="1,6,1,1"
+                                          ToolTip="启动 scrcpy 时不传输设备音频，适用于音频编码报错的设备"/>
                                 <TextBlock Text="{Binding AutoRotateStatusText}"
                                            Margin="1,16,1,4"
                                            FontWeight="SemiBold"/>

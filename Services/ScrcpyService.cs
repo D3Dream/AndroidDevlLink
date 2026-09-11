@@ -21,7 +21,7 @@ public sealed class ScrcpyService : IScrcpyService
             : scrcpyExecutable;
     }
 
-    public Task StartAsync(string serial, CancellationToken cancellationToken)
+    public Task StartAsync(string serial, bool noAudio, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(serial);
         cancellationToken.ThrowIfCancellationRequested();
@@ -30,7 +30,7 @@ public sealed class ScrcpyService : IScrcpyService
         {
             _processLauncher.Start(
                 _scrcpyExecutable,
-                ["-s", serial],
+                noAudio ? ["-s", serial, "--no-audio"] : ["-s", serial],
                 GetWorkingDirectory(_scrcpyExecutable));
             return Task.CompletedTask;
         }

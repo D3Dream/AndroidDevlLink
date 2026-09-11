@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Threading;
 using AndroidDevLink.Models;
 using AndroidDevLink.ViewModels;
 using Microsoft.Win32;
@@ -120,8 +121,8 @@ public partial class DeviceFileBrowserView : UserControl
         }
 
         string? localTargetPath = entry.IsDirectory
-            ? SelectDownloadDirectory(entry)
-            : SelectDownloadFile(entry);
+            ? await SelectDownloadDirectoryAsync(entry)
+            : await SelectDownloadFileAsync(entry);
         if (string.IsNullOrWhiteSpace(localTargetPath))
         {
             return;
@@ -133,26 +134,50 @@ public partial class DeviceFileBrowserView : UserControl
         }
     }
 
-    private string? SelectDownloadFile(AndroidFileEntry entry)
-    {
-        SaveFileDialog dialog = new()
+    private Task<string?> SelectDownloadFileAsync(AndroidFileEntry entry) =>
+        RunDialogOnStaThread(() =>
         {
-            Title = "下载 Android 文件",
-            FileName = entry.Name,
-            AddExtension = false,
-            OverwritePrompt = true
-        };
-        return dialog.ShowDialog(Window.GetWindow(this)) == true ? dialog.FileName : null;
-    }
+            SaveFileDialog dialog = new()
+            {
+                Title = "下载 Android 文件",
+                FileName = entry.Name,
+                AddExtension = false,
+                OverwritePrompt = true
+            };
+            return dialog.ShowDialog() == true ? dialog.FileName : null;
+        });
 
-    private string? SelectDownloadDirectory(AndroidFileEntry entry)
-    {
-        OpenFolderDialog dialog = new()
+    private Task<string?> SelectDownloadDirectoryAsync(AndroidFileEntry entry) =>
+        RunDialogOnStaThread(() =>
         {
-            Title = $"选择保存 {entry.Name} 的父目录",
-            Multiselect = false
+            OpenFolderDialog dialog = new()
+            {
+                Title = $"选择保存 {entry.Name} 的父目录",
+                Multiselect = false
+            };
+            return dialog.ShowDialog() == true ? dialog.FolderName : null;
+        });
+
+    private static Task<string?> RunDialogOnStaThread(Func<string?> showDialog)
+    {
+        TaskCompletionSource<string?> completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        Thread dialogThread = new(() =>
+        {
+            try
+            {
+                completion.SetResult(showDialog());
+            }
+            catch (Exception exception)
+            {
+                completion.SetException(exception);
+            }
+        })
+        {
+            IsBackground = true
         };
-        return dialog.ShowDialog(Window.GetWindow(this)) == true ? dialog.FolderName : null;
+        dialogThread.SetApartmentState(ApartmentState.STA);
+        dialogThread.Start();
+        return completion.Task;
     }
 
     private async void UploadFile_Click(object sender, RoutedEventArgs e)
