@@ -8,11 +8,12 @@ A Windows desktop tool built with C# and WPF for managing Android devices throug
 
 ## Features
 
-- **Device management:** list connected devices, inspect connection status and model information, and copy device serial numbers.
+- **Device management:** list connected devices, inspect connection status and model information, copy device serial numbers, and refresh automatically when devices are attached or removed.
 - **App management:** browse and filter system and third-party packages, install APKs, request app uninstallation, launch launcher activities, copy APK paths, and extract APK files.
-- **File browser:** navigate Android directories, filter entries by name, upload files, download files or folders, create folders, rename entries, and delete entries with confirmation.
+- **File browser:** navigate Android directories, filter entries by name, upload files, download files or folders, create folders, rename entries, and delete one or multiple files with confirmation.
 - **Upload queue:** both upload entry points share one sequential queue. Add more files during a transfer, select multiple files in the file browser, inspect task status, cancel individual tasks, and clear waiting items or finished records.
 - **Media scanning:** request a scan for a selected image, audio, or video file, or for media files in the currently loaded directory. Media uploaded through the file browser is automatically submitted for scanning.
+- **Event logs:** inspect bottom status events in a dedicated log page, retain 50, 100, 200, 300, or 500 entries, and automatically evict the oldest entries.
 - **Device controls:** wake or sleep the screen, toggle auto-rotation, rotate the screen by 90°, and launch scrcpy mirroring.
 
 ## Requirements
@@ -71,6 +72,7 @@ The default Debug executable is `bin/Debug/net10.0-windows/AndroidDevLink.exe`. 
 
 - Each queued upload retains the device and destination selected when it was added. Changing the current device or directory does not redirect existing tasks.
 - The queue shows task states and an activity indicator, not percentage progress. It is kept in memory; closing the app cancels active and waiting uploads.
+- Event logs are kept in memory for the current run and are not persisted after the application exits.
 - Cancelling a transfer may leave an incomplete file on the device.
 - Directory media scanning uses all media entries in the currently loaded directory, regardless of the name filter. It does not recurse into subdirectories; refresh the directory first if its contents have changed.
 - A successful scan request does not confirm that the file has appeared in MediaStore or a player. Android version, permissions, format support, `.nomedia` files, and player caching can affect visibility.
