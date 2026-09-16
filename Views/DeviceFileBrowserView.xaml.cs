@@ -20,7 +20,20 @@ public partial class DeviceFileBrowserView : UserControl
 
     private async void FileDataGrid_MouseDoubleClick(object sender, MouseButtonEventArgs e)
     {
-        if (ViewModel is { } viewModel && viewModel.OpenSelectedEntryCommand.CanExecute(null))
+        if (ViewModel is not { } viewModel)
+        {
+            return;
+        }
+
+        DataGridRow? row = FindVisualParent<DataGridRow>(e.OriginalSource as DependencyObject);
+        if (row?.DataContext is AndroidFileEntry { IsDirectory: true } directory)
+        {
+            await viewModel.NavigateToAsync(directory.FullPath);
+            e.Handled = true;
+            return;
+        }
+
+        if (viewModel.OpenSelectedEntryCommand.CanExecute(null))
         {
             await viewModel.OpenSelectedEntryCommand.ExecuteAsync(null);
         }
@@ -43,8 +56,36 @@ public partial class DeviceFileBrowserView : UserControl
             return;
         }
 
-        row.IsSelected = true;
+        if (row.DataContext is AndroidFileEntry entry && entry.IsDirectory)
+        {
+            e.Handled = true;
+            return;
+        }
+
+        if (!row.IsSelected)
+        {
+            FileDataGrid.SelectedItems.Clear();
+            row.IsSelected = true;
+        }
         row.Focus();
+    }
+
+    private void FileDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (ViewModel is not { } viewModel)
+        {
+            return;
+        }
+
+        foreach (AndroidFileEntry folder in FileDataGrid.SelectedItems
+                     .OfType<AndroidFileEntry>()
+                     .Where(entry => entry.IsDirectory)
+                     .ToArray())
+        {
+            FileDataGrid.SelectedItems.Remove(folder);
+        }
+
+        viewModel.SetSelectedEntries(FileDataGrid.SelectedItems.OfType<AndroidFileEntry>());
     }
 
     private void FileDataGrid_ContextMenuOpening(object sender, ContextMenuEventArgs e)
@@ -256,15 +297,22 @@ public partial class DeviceFileBrowserView : UserControl
 
     private async void DeleteEntry_Click(object sender, RoutedEventArgs e)
     {
-        if (ViewModel?.SelectedEntry is not { } entry)
+        if (ViewModel is not { } viewModel)
         {
             return;
         }
 
-        string itemType = entry.IsDirectory ? "文件夹及其全部内容" : "文件";
+        IReadOnlyList<AndroidFileEntry> entries = viewModel.SelectedEntries;
+        if (entries.Count == 0)
+        {
+            return;
+        }
+
+        string itemType = entries.Count == 1 ? "文件" : $"{entries.Count} 个文件";
+        string itemList = string.Join(Environment.NewLine, entries.Select(item => item.FullPath));
         MessageBoxResult firstConfirmation = MessageBox.Show(
             Window.GetWindow(this),
-            $"即将永久删除 Android {itemType}：\n\n{entry.FullPath}\n\n此操作无法撤销。是否继续？",
+            $"即将永久删除 Android {itemType}：\n\n{itemList}\n\n此操作无法撤销。是否继续？",
             "确认删除",
             MessageBoxButton.YesNo,
             MessageBoxImage.Warning,
@@ -276,7 +324,7 @@ public partial class DeviceFileBrowserView : UserControl
 
         MessageBoxResult secondConfirmation = MessageBox.Show(
             Window.GetWindow(this),
-            $"请再次确认永久删除：\n\n{entry.FullPath}",
+            $"请再次确认永久删除以上 {itemType}。",
             "最终确认删除",
             MessageBoxButton.YesNo,
             MessageBoxImage.Error,
@@ -286,9 +334,9 @@ public partial class DeviceFileBrowserView : UserControl
             return;
         }
 
-        if (ViewModel.DeleteSelectedEntryCommand.CanExecute(null))
+        if (viewModel.DeleteSelectedEntriesCommand.CanExecute(null))
         {
-            await ViewModel.DeleteSelectedEntryCommand.ExecuteAsync(null);
+            await viewModel.DeleteSelectedEntriesCommand.ExecuteAsync(null);
         }
     }
 

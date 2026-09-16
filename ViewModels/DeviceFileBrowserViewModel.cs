@@ -26,6 +26,8 @@ public sealed partial class DeviceFileBrowserViewModel : ObservableObject, IDisp
     [ObservableProperty]
     private AndroidFileEntry? selectedEntry;
 
+    public ObservableCollection<AndroidFileEntry> SelectedEntries { get; } = [];
+
     [ObservableProperty]
     private string currentPath = DefaultPath;
 
@@ -51,6 +53,7 @@ public sealed partial class DeviceFileBrowserViewModel : ObservableObject, IDisp
     {
         UploadQueue = uploadQueue ?? throw new ArgumentNullException(nameof(uploadQueue));
         _fileService = fileService ?? throw new ArgumentNullException(nameof(fileService));
+        UploadQueue.UploadCompleted += OnUploadCompleted;
         RefreshCommand = new AsyncRelayCommand(RefreshAsync, CanLoad);
         GoBackCommand = new AsyncRelayCommand(GoBackAsync, () => CanLoad() && _backHistory.Count > 0);
         GoForwardCommand = new AsyncRelayCommand(GoForwardAsync, () => CanLoad() && _forwardHistory.Count > 0);
@@ -62,6 +65,7 @@ public sealed partial class DeviceFileBrowserViewModel : ObservableObject, IDisp
         DownloadSelectedEntryCommand = new AsyncRelayCommand<string>(DownloadSelectedEntryAsync, CanDownloadSelectedEntry);
         RenameSelectedEntryCommand = new AsyncRelayCommand<string>(RenameSelectedEntryAsync, CanRenameSelectedEntry);
         DeleteSelectedEntryCommand = new AsyncRelayCommand(DeleteSelectedEntryAsync, CanModifySelectedEntry);
+        DeleteSelectedEntriesCommand = new AsyncRelayCommand(DeleteSelectedEntriesAsync, CanDeleteSelectedEntries);
         ScanSelectedMediaCommand = new AsyncRelayCommand(ScanSelectedMediaAsync, CanScanSelectedMedia);
         ScanMediaDirectoryCommand = new AsyncRelayCommand(ScanMediaDirectoryAsync, CanLoad);
     }
@@ -80,8 +84,21 @@ public sealed partial class DeviceFileBrowserViewModel : ObservableObject, IDisp
     public IAsyncRelayCommand<string> DownloadSelectedEntryCommand { get; }
     public IAsyncRelayCommand<string> RenameSelectedEntryCommand { get; }
     public IAsyncRelayCommand DeleteSelectedEntryCommand { get; }
+    public IAsyncRelayCommand DeleteSelectedEntriesCommand { get; }
     public IAsyncRelayCommand ScanSelectedMediaCommand { get; }
     public IAsyncRelayCommand ScanMediaDirectoryCommand { get; }
+
+    public void SetSelectedEntries(IEnumerable<AndroidFileEntry> entries)
+    {
+        SelectedEntries.Clear();
+        foreach (AndroidFileEntry entry in entries.Where(entry => !entry.IsDirectory))
+        {
+            SelectedEntries.Add(entry);
+        }
+
+        SelectedEntry = SelectedEntries.LastOrDefault();
+        DeleteSelectedEntriesCommand.NotifyCanExecuteChanged();
+    }
 
     public string BreadcrumbText => SelectedDevice is null
         ? "未选择设备"
@@ -387,6 +404,57 @@ public sealed partial class DeviceFileBrowserViewModel : ObservableObject, IDisp
         }
     }
 
+    private async Task DeleteSelectedEntriesAsync()
+    {
+        AndroidDevice? device = SelectedDevice;
+        AndroidFileEntry[] entries = SelectedEntries.Where(entry => !entry.IsDirectory).ToArray();
+        if (device?.IsOnline != true || entries.Length == 0)
+        {
+            return;
+        }
+
+        _entryOperationCancellation?.Cancel();
+        _entryOperationCancellation?.Dispose();
+        _entryOperationCancellation = new CancellationTokenSource();
+
+        int deleted = 0;
+        List<string> failures = [];
+        try
+        {
+            foreach (AndroidFileEntry entry in entries)
+            {
+                try
+                {
+                    await _fileService.DeleteEntryAsync(
+                        device.Serial, entry.FullPath, false, _entryOperationCancellation.Token);
+                    deleted++;
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (Exception exception)
+                {
+                    failures.Add($"{entry.Name}: {exception.Message}");
+                }
+            }
+
+            await LoadDirectoryAsync(CurrentPath);
+            StatusMessage = failures.Count == 0
+                ? $"已删除 {deleted} 个文件。"
+                : $"已删除 {deleted} 个文件，失败 {failures.Count} 个：{string.Join("；", failures)}";
+            SelectedEntries.Clear();
+        }
+        catch (OperationCanceledException)
+        {
+            StatusMessage = $"删除已取消，已删除 {deleted} 个文件。";
+        }
+        catch (Exception exception)
+        {
+            StatusMessage = exception.Message;
+        }
+    }
+
     private async Task ScanSelectedMediaAsync()
     {
         AndroidDevice? device = SelectedDevice;
@@ -553,6 +621,9 @@ public sealed partial class DeviceFileBrowserViewModel : ObservableObject, IDisp
 
     private bool CanModifySelectedEntry() => CanLoad() && SelectedEntry is not null;
 
+    private bool CanDeleteSelectedEntries() =>
+        CanLoad() && SelectedEntries.Count > 0 && SelectedEntries.All(entry => !entry.IsDirectory);
+
     private bool CanScanSelectedMedia() => CanLoad() && SelectedEntry?.IsMediaFile == true;
 
     private bool CanUploadFile(string? localFilePath) =>
@@ -562,6 +633,18 @@ public sealed partial class DeviceFileBrowserViewModel : ObservableObject, IDisp
         CanLoad() && !string.IsNullOrWhiteSpace(directoryName);
 
     private static bool IsMediaFileName(string fileName) => AndroidFileEntry.IsMediaFileName(fileName);
+
+    private void OnUploadCompleted(object? sender, UploadItem item)
+    {
+        if (_disposed || SelectedDevice?.IsOnline != true ||
+            !string.Equals(SelectedDevice.Serial, item.Serial, StringComparison.Ordinal) ||
+            !string.Equals(CurrentPath, AndroidFileOutputParser.NormalizePath(item.TargetPath), StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _ = RefreshAsync();
+    }
 
     partial void OnSelectedDeviceChanged(AndroidDevice? value)
     {
@@ -576,6 +659,7 @@ public sealed partial class DeviceFileBrowserViewModel : ObservableObject, IDisp
         DownloadSelectedEntryCommand.NotifyCanExecuteChanged();
         RenameSelectedEntryCommand.NotifyCanExecuteChanged();
         DeleteSelectedEntryCommand.NotifyCanExecuteChanged();
+        DeleteSelectedEntriesCommand.NotifyCanExecuteChanged();
         ScanSelectedMediaCommand.NotifyCanExecuteChanged();
     }
 
@@ -634,5 +718,6 @@ public sealed partial class DeviceFileBrowserViewModel : ObservableObject, IDisp
         _mediaScanCancellation?.Cancel();
         _mediaScanCancellation?.Dispose();
         _mediaScanCancellation = null;
+        UploadQueue.UploadCompleted -= OnUploadCompleted;
     }
 }

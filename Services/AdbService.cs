@@ -22,6 +22,9 @@ public sealed class AdbService : IAdbService
             : adbExecutable;
     }
 
+    public AdbDeviceMonitor StartDeviceMonitoring(Action onChanged) =>
+        new(_adbExecutable, onChanged ?? throw new ArgumentNullException(nameof(onChanged)));
+
     public async Task<IReadOnlyList<AndroidDevice>> GetDevicesAsync(CancellationToken cancellationToken)
     {
         ProcessResult result = await RunAsync(["devices", "-l"], cancellationToken);

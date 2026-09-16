@@ -55,6 +55,7 @@ public sealed class UploadQueueViewModel : ObservableObject, IDisposable
     private bool _disposed;
     public ReadOnlyObservableCollection<UploadItem> Items { get; }
     public Task ProcessingTask { get; private set; } = Task.CompletedTask;
+    public event EventHandler<UploadItem>? UploadCompleted;
     public IRelayCommand<UploadItem> CancelCommand { get; }
     public IRelayCommand ClearWaitingCommand { get; }
     public IRelayCommand ClearFinishedCommand { get; }
@@ -119,6 +120,7 @@ public sealed class UploadQueueViewModel : ObservableObject, IDisposable
                         if (item.AfterUpload is not null)
                             await Task.Run(() => item.AfterUpload(cancellation.Token), cancellation.Token);
                         item.Update(UploadState.Completed, "上传完成");
+                        UploadCompleted?.Invoke(this, item);
                     }
                     catch (Exception ex)
                     {

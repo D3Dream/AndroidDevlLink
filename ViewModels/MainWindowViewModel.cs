@@ -19,6 +19,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
     private CancellationTokenSource? _autoRotateStateCancellation;
     private bool _disposed;
     private bool _isRefreshingDevices;
+    private readonly AdbDeviceMonitor? _deviceMonitor;
+    private readonly SynchronizationContext? _uiContext;
 
     [ObservableProperty]
     private AndroidDevice? selectedDevice;
@@ -88,6 +90,11 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
     {
         _adbService = adbService ?? throw new ArgumentNullException(nameof(adbService));
         _scrcpyService = scrcpyService ?? throw new ArgumentNullException(nameof(scrcpyService));
+        _uiContext = SynchronizationContext.Current;
+        if (_adbService is AdbService concreteAdbService)
+        {
+            _deviceMonitor = concreteAdbService.StartDeviceMonitoring(OnDeviceMonitorChanged);
+        }
         FileBrowser = new DeviceFileBrowserViewModel(
             androidFileService ?? throw new ArgumentNullException(nameof(androidFileService)), UploadQueue);
 
@@ -215,6 +222,19 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
             SelectedDevice = null;
             ClearPackages();
             SetStatus(exception.Message);
+        }
+    }
+
+    private void OnDeviceMonitorChanged()
+    {
+        void Refresh() => _ = RefreshDevicesAsync();
+        if (_uiContext is { } context)
+        {
+            context.Post(_ => Refresh(), null);
+        }
+        else
+        {
+            Refresh();
         }
     }
 
@@ -915,6 +935,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
         _disposed = true;
         FileBrowser.Dispose();
         UploadQueue.Dispose();
+        _deviceMonitor?.Dispose();
         CancelAndDispose(ref _deviceLoadCancellation);
         CancelAndDispose(ref _packageLoadCancellation);
         CancelAndDispose(ref _fileOperationCancellation);
