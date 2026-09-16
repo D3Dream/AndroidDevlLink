@@ -119,6 +119,7 @@
                               CanUserDeleteRows="False"
                               CanUserResizeRows="False"
                               IsReadOnly="True"
+                              SelectionUnit="FullRow"
                               SelectionMode="Extended"
                               PreviewMouseRightButtonDown="FileDataGrid_PreviewMouseRightButtonDown"
                               ContextMenuOpening="FileDataGrid_ContextMenuOpening"

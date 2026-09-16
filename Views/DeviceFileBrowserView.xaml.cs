@@ -302,13 +302,20 @@ public partial class DeviceFileBrowserView : UserControl
             return;
         }
 
-        IReadOnlyList<AndroidFileEntry> entries = viewModel.SelectedEntries;
-        if (entries.Count == 0)
+        // Read the control's selection at the moment the menu action is invoked.
+        // SelectedItem is only the anchor item and may not contain the full range.
+        AndroidFileEntry[] entries = FileDataGrid.SelectedItems
+            .OfType<AndroidFileEntry>()
+            .Where(entry => !entry.IsDirectory)
+            .ToArray();
+        if (entries.Length == 0)
         {
             return;
         }
 
-        string itemType = entries.Count == 1 ? "文件" : $"{entries.Count} 个文件";
+        viewModel.SetSelectedEntries(entries);
+
+        string itemType = entries.Length == 1 ? "文件" : $"{entries.Length} 个文件";
         string itemList = string.Join(Environment.NewLine, entries.Select(item => item.FullPath));
         MessageBoxResult firstConfirmation = MessageBox.Show(
             Window.GetWindow(this),
