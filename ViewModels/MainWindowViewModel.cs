@@ -11,6 +11,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
 {
     private readonly IAdbService _adbService;
     private readonly IScrcpyService _scrcpyService;
+    private readonly IAppLogService _logService;
     private CancellationTokenSource? _deviceLoadCancellation;
     private CancellationTokenSource? _packageLoadCancellation;
     private CancellationTokenSource? _fileOperationCancellation;
@@ -74,12 +75,12 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
     private bool scrcpyNoAudio;
 
     public MainWindowViewModel(IAdbService adbService)
-        : this(adbService, new ScrcpyService(), new AndroidFileService())
+        : this(adbService, new ScrcpyService(), new AndroidFileService(), new AppLogService())
     {
     }
 
     public MainWindowViewModel(IAdbService adbService, IScrcpyService scrcpyService)
-        : this(adbService, scrcpyService, new AndroidFileService())
+        : this(adbService, scrcpyService, new AndroidFileService(), new AppLogService())
     {
     }
 
@@ -87,16 +88,26 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
         IAdbService adbService,
         IScrcpyService scrcpyService,
         IAndroidFileService androidFileService)
+        : this(adbService, scrcpyService, androidFileService, new AppLogService())
+    {
+    }
+
+    public MainWindowViewModel(
+        IAdbService adbService,
+        IScrcpyService scrcpyService,
+        IAndroidFileService androidFileService,
+        IAppLogService logService)
     {
         _adbService = adbService ?? throw new ArgumentNullException(nameof(adbService));
         _scrcpyService = scrcpyService ?? throw new ArgumentNullException(nameof(scrcpyService));
+        _logService = logService ?? throw new ArgumentNullException(nameof(logService));
         _uiContext = SynchronizationContext.Current;
         if (_adbService is AdbService concreteAdbService)
         {
             _deviceMonitor = concreteAdbService.StartDeviceMonitoring(OnDeviceMonitorChanged);
         }
         FileBrowser = new DeviceFileBrowserViewModel(
-            androidFileService ?? throw new ArgumentNullException(nameof(androidFileService)), UploadQueue);
+            androidFileService ?? throw new ArgumentNullException(nameof(androidFileService)), UploadQueue, _logService);
 
         RefreshDevicesCommand = new AsyncRelayCommand(
             RefreshDevicesAsync,
@@ -126,10 +137,12 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
         ToggleAutoRotateCommand = new AsyncRelayCommand(ToggleAutoRotateAsync, CanRunDeviceControl);
         RotateScreen90Command = new AsyncRelayCommand(RotateScreen90Async, CanRunDeviceControl);
         CheckCozylaPackge = new AsyncRelayCommand(CheckCozylaPackageAsync);
+        ClearLogsCommand = new RelayCommand(_logService.Clear);
     }
 
     public DeviceFileBrowserViewModel FileBrowser { get; }
     public UploadQueueViewModel UploadQueue { get; } = new();
+    public IAppLogService LogService => _logService;
 
     public ObservableCollection<AndroidDevice> Devices { get; } = [];
     public ObservableCollection<string> SystemPackages { get; } = [];
@@ -159,6 +172,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
     public IAsyncRelayCommand StartScrcpyCommand { get; }
     public IAsyncRelayCommand ToggleAutoRotateCommand { get; }
     public IAsyncRelayCommand RotateScreen90Command { get; }
+    public IRelayCommand ClearLogsCommand { get; }
 
     public string AutoRotateStatusText => IsAutoRotateEnabled switch
     {
@@ -289,6 +303,14 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
             ClearPackages();
             SetPackageEmptyMessage("读取包名失败");
             SetStatus(exception.Message);
+        }
+    }
+
+    partial void OnStatusMessageChanged(string value)
+    {
+        if (!string.IsNullOrWhiteSpace(value))
+        {
+            _logService.Add(value);
         }
     }
 

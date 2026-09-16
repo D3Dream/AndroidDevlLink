@@ -11,6 +11,7 @@ public sealed partial class DeviceFileBrowserViewModel : ObservableObject, IDisp
 {
     private const string DefaultPath = "/sdcard";
     private readonly IAndroidFileService _fileService;
+    private readonly IAppLogService _logService;
     private readonly Stack<string> _backHistory = [];
     private readonly Stack<string> _forwardHistory = [];
     private CancellationTokenSource? _loadCancellation;
@@ -41,7 +42,7 @@ public sealed partial class DeviceFileBrowserViewModel : ObservableObject, IDisp
     private string searchText = string.Empty;
 
     public DeviceFileBrowserViewModel(IAndroidFileService fileService)
-        : this(fileService, new UploadQueueViewModel())
+        : this(fileService, new UploadQueueViewModel(), new AppLogService())
     {
         _ownsUploadQueue = true;
     }
@@ -50,9 +51,18 @@ public sealed partial class DeviceFileBrowserViewModel : ObservableObject, IDisp
     public UploadQueueViewModel UploadQueue { get; }
 
     public DeviceFileBrowserViewModel(IAndroidFileService fileService, UploadQueueViewModel uploadQueue)
+        : this(fileService, uploadQueue, new AppLogService())
+    {
+    }
+
+    public DeviceFileBrowserViewModel(
+        IAndroidFileService fileService,
+        UploadQueueViewModel uploadQueue,
+        IAppLogService logService)
     {
         UploadQueue = uploadQueue ?? throw new ArgumentNullException(nameof(uploadQueue));
         _fileService = fileService ?? throw new ArgumentNullException(nameof(fileService));
+        _logService = logService ?? throw new ArgumentNullException(nameof(logService));
         UploadQueue.UploadCompleted += OnUploadCompleted;
         RefreshCommand = new AsyncRelayCommand(RefreshAsync, CanLoad);
         GoBackCommand = new AsyncRelayCommand(GoBackAsync, () => CanLoad() && _backHistory.Count > 0);
@@ -68,6 +78,14 @@ public sealed partial class DeviceFileBrowserViewModel : ObservableObject, IDisp
         DeleteSelectedEntriesCommand = new AsyncRelayCommand(DeleteSelectedEntriesAsync, CanDeleteSelectedEntries);
         ScanSelectedMediaCommand = new AsyncRelayCommand(ScanSelectedMediaAsync, CanScanSelectedMedia);
         ScanMediaDirectoryCommand = new AsyncRelayCommand(ScanMediaDirectoryAsync, CanLoad);
+    }
+
+    partial void OnStatusMessageChanged(string value)
+    {
+        if (!string.IsNullOrWhiteSpace(value))
+        {
+            _logService.Add(value);
+        }
     }
 
     public ObservableCollection<AndroidFileEntry> Entries { get; } = [];
