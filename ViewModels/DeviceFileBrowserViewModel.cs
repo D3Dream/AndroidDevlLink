@@ -114,7 +114,11 @@ public sealed partial class DeviceFileBrowserViewModel : ObservableObject, IDisp
             SelectedEntries.Add(entry);
         }
 
-        SelectedEntry = SelectedEntries.LastOrDefault();
+        if (SelectedEntry is null || !SelectedEntries.Contains(SelectedEntry))
+        {
+            SelectedEntry = SelectedEntries.LastOrDefault();
+        }
+
         DeleteSelectedEntriesCommand.NotifyCanExecuteChanged();
     }
 

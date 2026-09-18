@@ -11,6 +11,10 @@ namespace AndroidDevLink.Views;
 
 public partial class DeviceFileBrowserView : UserControl
 {
+    private bool _isSyncingSelection;
+    private bool _isContextMenuOpen;
+    private AndroidFileEntry[] _contextSelection = [];
+
     public DeviceFileBrowserView()
     {
         InitializeComponent();
@@ -67,25 +71,36 @@ public partial class DeviceFileBrowserView : UserControl
             FileDataGrid.SelectedItems.Clear();
             row.IsSelected = true;
         }
-        row.Focus();
+
+        CaptureContextSelection();
     }
 
     private void FileDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (ViewModel is not { } viewModel)
+        if (_isSyncingSelection || _isContextMenuOpen || ViewModel is not { } viewModel)
         {
             return;
         }
 
-        foreach (AndroidFileEntry folder in FileDataGrid.SelectedItems
-                     .OfType<AndroidFileEntry>()
-                     .Where(entry => entry.IsDirectory)
-                     .ToArray())
+        _isSyncingSelection = true;
+        try
         {
-            FileDataGrid.SelectedItems.Remove(folder);
-        }
+            foreach (AndroidFileEntry folder in FileDataGrid.SelectedItems
+                         .OfType<AndroidFileEntry>()
+                         .Where(entry => entry.IsDirectory)
+                         .ToArray())
+            {
+                FileDataGrid.SelectedItems.Remove(folder);
+            }
 
-        viewModel.SetSelectedEntries(FileDataGrid.SelectedItems.OfType<AndroidFileEntry>());
+            AndroidFileEntry[] files = FileDataGrid.SelectedItems.OfType<AndroidFileEntry>().ToArray();
+            _contextSelection = files;
+            viewModel.SetSelectedEntries(files);
+        }
+        finally
+        {
+            _isSyncingSelection = false;
+        }
     }
 
     private void FileDataGrid_ContextMenuOpening(object sender, ContextMenuEventArgs e)
@@ -96,12 +111,18 @@ public partial class DeviceFileBrowserView : UserControl
             return;
         }
 
-        AndroidFileEntry? entry = viewModel.SelectedEntry;
+        CaptureContextSelection();
+
+        AndroidFileEntry? entry = viewModel.SelectedEntry ?? _contextSelection.LastOrDefault();
         if (entry is null)
         {
             e.Handled = true;
             return;
         }
+
+        _isContextMenuOpen = true;
+        menu.Closed -= FileContextMenu_Closed;
+        menu.Closed += FileContextMenu_Closed;
 
         foreach (object item in menu.Items)
         {
@@ -302,12 +323,7 @@ public partial class DeviceFileBrowserView : UserControl
             return;
         }
 
-        // Read the control's selection at the moment the menu action is invoked.
-        // SelectedItem is only the anchor item and may not contain the full range.
-        AndroidFileEntry[] entries = FileDataGrid.SelectedItems
-            .OfType<AndroidFileEntry>()
-            .Where(entry => !entry.IsDirectory)
-            .ToArray();
+        AndroidFileEntry[] entries = GetSelectedFilesForAction();
         if (entries.Length == 0)
         {
             return;
@@ -345,6 +361,55 @@ public partial class DeviceFileBrowserView : UserControl
         {
             await viewModel.DeleteSelectedEntriesCommand.ExecuteAsync(null);
         }
+    }
+
+    private void FileContextMenu_Closed(object sender, RoutedEventArgs e)
+    {
+        _isContextMenuOpen = false;
+        if (sender is ContextMenu menu)
+        {
+            menu.Closed -= FileContextMenu_Closed;
+        }
+    }
+
+    private void CaptureContextSelection()
+    {
+        AndroidFileEntry[] files = FileDataGrid.SelectedItems
+            .OfType<AndroidFileEntry>()
+            .Where(entry => !entry.IsDirectory)
+            .ToArray();
+        if (files.Length == 0)
+        {
+            return;
+        }
+
+        if (_contextSelection.Length > files.Length &&
+            files.All(file => _contextSelection.Contains(file)))
+        {
+            return;
+        }
+
+        _contextSelection = files;
+    }
+
+    private AndroidFileEntry[] GetSelectedFilesForAction()
+    {
+        AndroidFileEntry[] liveSelection = FileDataGrid.SelectedItems
+            .OfType<AndroidFileEntry>()
+            .Where(entry => !entry.IsDirectory)
+            .ToArray();
+        if (liveSelection.Length > 1)
+        {
+            return liveSelection;
+        }
+
+        if (_contextSelection.Length > 1 &&
+            (liveSelection.Length == 0 || _contextSelection.Contains(liveSelection[0])))
+        {
+            return _contextSelection;
+        }
+
+        return liveSelection;
     }
 
     private static T? FindVisualParent<T>(DependencyObject? child) where T : DependencyObject

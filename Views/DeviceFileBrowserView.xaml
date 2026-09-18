@@ -106,7 +106,7 @@
                 <Grid>
                     <DataGrid x:Name="FileDataGrid"
                               ItemsSource="{Binding VisibleEntries}"
-                              SelectedItem="{Binding SelectedEntry, Mode=TwoWay}"
+                              SelectedItem="{Binding SelectedEntry, Mode=OneWayToSource}"
                               SelectionChanged="FileDataGrid_SelectionChanged"
                               MouseDoubleClick="FileDataGrid_MouseDoubleClick"
                               AutoGenerateColumns="False"
